@@ -49,6 +49,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <omp.h>
 
 #include <cmath>
 
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
 	int M = -1;		   // number of columns 2^10
 	int S = -1;		   // total size 2^22
 	int nrepeat = 100; // number of repeats of the test
+	int nbcore = 1;
 
 	// Read command line arguments.
 	for (int i = 0; i < argc; i++)
@@ -78,6 +80,11 @@ int main(int argc, char *argv[])
 		{
 			S = pow(2, atof(argv[++i]));
 			printf("  User S is %d\n", S);
+		}
+		else if ((strcmp(argv[i], "-C") == 0) || (strcmp(argv[i], "-nbcore") == 0))
+		{
+			nbcore = atol(argv[++i]);
+			omp_set_num_threads(nbcore);
 		}
 		else if (strcmp(argv[i], "-nrepeat") == 0)
 		{
@@ -99,9 +106,9 @@ int main(int argc, char *argv[])
 	checkSizes(N, M, S, nrepeat);
 
 	// Allocate x,y,A
-	std::vector<double> y(N,1);
-	std::vector<double> x(M,1);
-	std::vector<std::vector<double> > A(N,std::vector<double>(M,1));
+	std::vector<double> y(N, 1);
+	std::vector<double> x(M, 1);
+	std::vector<std::vector<double>> A(N, std::vector<double>(M, 1));
 
 	// Initialize y vector to 1.
 
@@ -133,7 +140,6 @@ int main(int argc, char *argv[])
 			result += multiplication;
 		}
 
-		
 		// Output result.
 		if (repeat == (nrepeat - 1))
 		{
@@ -171,9 +177,9 @@ int main(int argc, char *argv[])
 	// std::free(x);
 
 	std::fstream output;
-    output.open("vector_stats.csv", std::ios_base::app);
-	output << "sequential" << ", " << 1 << ", " << S << ", " << time << "\n";
-	
+	output.open("vector_stats.csv", std::ios_base::app);
+	output << "sequential"
+		   << ", " << nbcore << ", " << S << ", " << time << "\n";
 
 	return 0;
 }

@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	int M = -1;		   // number of columns 2^10
 	int S = -1;		   // total size 2^22
 	int nrepeat = 100; // number of repeats of the test
-    int nbcore = 1;
+	int nbcore = 1;
 
 	// Read command line arguments.
 	for (int i = 0; i < argc; i++)
@@ -80,10 +80,12 @@ int main(int argc, char *argv[])
 		{
 			S = pow(2, atof(argv[++i]));
 			printf("  User S is %d\n", S);
-		} else if ( ( strcmp( argv[ i ], "-C" ) == 0 ) || ( strcmp( argv[ i ], "-nbcore" ) == 0 ) ) {
-            nbcore = atol( argv[ ++i ] );
-            omp_set_num_threads(nbcore);
-        }
+		}
+		else if ((strcmp(argv[i], "-C") == 0) || (strcmp(argv[i], "-nbcore") == 0))
+		{
+			nbcore = atol(argv[++i]);
+			omp_set_num_threads(nbcore);
+		}
 		else if (strcmp(argv[i], "-nrepeat") == 0)
 		{
 			nrepeat = atoi(argv[++i]);
@@ -104,18 +106,18 @@ int main(int argc, char *argv[])
 	checkSizes(N, M, S, nrepeat);
 
 	// Allocate x,y,A
-    double y[N];
-    double x[M];
-    double A[N*M];
-    for (int i = 0; i < N; i++)
-    {
-        y[i] = 1.0;
-        for (int j = 0; j < M; j++)
-        {
-            x[j] = 1.0;
-            A[i*M+j] = 1.0;
-        }
-    }
+	double *y = (double *)malloc(sizeof(double) * N);
+	double *x = (double *)malloc(sizeof(double) * M);
+	double *A = (double *)malloc(sizeof(double) * N * M);
+	for (int i = 0; i < N; i++)
+	{
+		y[i] = 1.0;
+		for (int j = 0; j < M; j++)
+		{
+			x[j] = 1.0;
+			A[i * M + j] = 1.0;
+		}
+	}
 
 	// Initialize y vector to 1.
 
@@ -131,26 +133,26 @@ int main(int argc, char *argv[])
 	for (int repeat = 0; repeat < nrepeat; repeat++)
 	{
 		double result = 0.0;
-		// For each line i
-		// Multiply the i lines with the vector x
-		// Sum the results of the previous step into a single variable
-		// Multiply the result of the previous step with the i value of vector y
-		// Sum the results of the previous step into a single variable (result)
-        #pragma omp parallel for shared(result)
+// For each line i
+// Multiply the i lines with the vector x
+// Sum the results of the previous step into a single variable
+// Multiply the result of the previous step with the i value of vector y
+// Sum the results of the previous step into a single variable (result)
+#pragma omp parallel for shared(result)
 		for (int i = 0; i < N; i++)
 		{
 			double multiplication = 0.0;
-            #pragma omp simd reduction(+:multiplication)
+#pragma omp simd reduction(+ \
+						   : multiplication)
 			for (int j = 0; j < M; j++)
 			{
-				multiplication += A[(i*M)+j] * x[j];
+				multiplication += A[(i * M) + j] * x[j];
 			}
-            multiplication = multiplication * y[i];
-            #pragma omp atomic
+			multiplication = multiplication * y[i];
+#pragma omp atomic
 			result += multiplication;
 		}
 
-		
 		// Output result.
 		if (repeat == (nrepeat - 1))
 		{
@@ -188,8 +190,9 @@ int main(int argc, char *argv[])
 	// std::free(x);
 
 	std::fstream output;
-    output.open("vector_stats.csv", std::ios_base::app);
-    output << "simd" << ", " << nbcore << ", " << S << ", " << time << "\n";
+	output.open("vector_stats.csv", std::ios_base::app);
+	output << "simd"
+		   << ", " << nbcore << ", " << S << ", " << time << "\n";
 
 	return 0;
 }
